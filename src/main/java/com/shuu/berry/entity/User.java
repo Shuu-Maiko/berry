@@ -1,5 +1,7 @@
 package com.shuu.berry.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -34,6 +36,8 @@ public class User {
   @NotBlank(message = "email is required")
   private String email;
 
+  // NOTE: Json ignore dont let password get serialize and deserialize
+  @JsonIgnore
   private String password;
 
   @Enumerated(EnumType.STRING)
