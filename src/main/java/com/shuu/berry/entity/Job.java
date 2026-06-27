@@ -11,6 +11,10 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -40,6 +44,18 @@ public class Job {
   @Enumerated(EnumType.STRING)
   @Column(name = "job_type")
   private JobType jobType;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "http_method")
+  private WebhookHttpMethod httpMethod;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(name = "http_headers", columnDefinition = "jsonb")
+  private java.util.Map<String, String> httpHeaders;
+
+  @JdbcTypeCode(SqlTypes.JSON)
+  @Column(columnDefinition = "jsonb")
+  private String payload;
 
   private String message;
 

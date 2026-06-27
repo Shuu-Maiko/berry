@@ -30,6 +30,8 @@ public class JobService {
   @Autowired
   private JobRepository jobRepository;
   @Autowired
+  private WebhookService webhookService;
+  @Autowired
   private UserRepository userRepository;
   @Autowired
   private JdbcTemplate jdbcTemplate;
@@ -66,6 +68,9 @@ public class JobService {
         .name(req.getName())
         .cronExp(req.getCronString())
         .url(req.getUrl() != null ? req.getUrl() : "")
+        .httpMethod(req.getHttpMethod())
+        .httpHeaders(req.getHttpHeaders())
+        .payload(req.getPayload())
         .jobType(req.getJobType() != null ? req.getJobType() : JobType.PRINT_LOG)
         .message(req.getMessage() != null ? req.getMessage() : "")
         .start(LocalDateTime.now())
@@ -80,11 +85,11 @@ public class JobService {
           req.getCronString(),
           () -> printService.printMessage(secureJobId, req.getMessage() != null ? req.getMessage() : ""));
     } else if (job.getJobType() == JobType.WEBHOOK) {
-      // TODO: add Webhook
       jobScheduler.scheduleRecurrently(
           secureJobId,
           req.getCronString(),
-          () -> printService.printMessage(secureJobId, "Executing Webhook for: " + req.getUrl()));
+          () -> webhookService.sendRequest(secureJobId, job.getUrl(), job.getHttpMethod(), job.getHttpHeaders(),
+              job.getPayload()));
     }
 
     return job;
@@ -114,10 +119,13 @@ public class JobService {
       throw new SecurityException("You do not own this job");
     }
 
-    LocalDateTime nextRunTime = null;
+    java.time.Instant nextRunTime = null;
     try {
       CronExpression cronExpression = CronExpression.parse(job.getCronExp());
-      nextRunTime = cronExpression.next(LocalDateTime.now());
+      LocalDateTime nextLocal = cronExpression.next(LocalDateTime.now());
+      if (nextLocal != null) {
+          nextRunTime = nextLocal.atZone(java.time.ZoneId.systemDefault()).toInstant();
+      }
     } catch (Exception e) {
       System.out.println(e.getMessage());
     }
@@ -160,7 +168,10 @@ public class JobService {
         .jobType(job.getJobType().name())
         .message(job.getMessage())
         .url(job.getUrl())
-        .createdAt(job.getStart())
+        .httpMethod(job.getHttpMethod() != null ? job.getHttpMethod().name() : null)
+        .httpHeaders(job.getHttpHeaders())
+        .payload(job.getPayload())
+        .createdAt(job.getStart() != null ? job.getStart().atZone(java.time.ZoneId.systemDefault()).toInstant() : null)
         .status(jobStatus)
         .lastRunTime(lastRunTime)
         .lastRunStatus(lastRunStatus)

@@ -18,12 +18,17 @@ public class JobDetailsResponseDTO {
   private String jobType;
   private String message;
   private String url;
-  private LocalDateTime createdAt;
+  
+  private String httpMethod;
+  private java.util.Map<String, String> httpHeaders;
+  private String payload;
+  
+  private Instant createdAt;
   private String status;
 
   private Instant lastRunTime;
   private String lastRunStatus;
-  private LocalDateTime nextRunTime;
+  private Instant nextRunTime;
 
   private JobRunHistoryDTO lastRun;
 }

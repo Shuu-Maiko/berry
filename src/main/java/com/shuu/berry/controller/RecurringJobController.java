@@ -45,7 +45,10 @@ public class RecurringJobController {
     try {
       User user = jobService.getAuthenticatedUser();
       List<Job> jobs = jobService.getUserJobs(user);
-      return ResponseEntity.ok(jobs);
+      List<JobDetailsResponseDTO> detailedJobs = jobs.stream()
+          .map(job -> jobService.getJobDetails(job.getSecureJobId(), user))
+          .toList();
+      return ResponseEntity.ok(detailedJobs);
     } catch (RuntimeException e) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
     }

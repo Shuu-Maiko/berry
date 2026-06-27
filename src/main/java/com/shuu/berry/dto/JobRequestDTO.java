@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import com.shuu.berry.entity.JobType;
 
+import com.shuu.berry.entity.WebhookHttpMethod;
+
 @Data
 public class JobRequestDTO {
   @NotBlank(message = "Job name is required")
@@ -19,4 +21,8 @@ public class JobRequestDTO {
 
   @NotNull(message = "Job type is required")
   private JobType jobType;
+
+  private WebhookHttpMethod httpMethod;
+  private java.util.Map<String, String> httpHeaders;
+  private String payload;
 }
