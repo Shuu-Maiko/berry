@@ -1,4 +1,4 @@
-package com.shuu.berry;
+package com.shuu.berry.controller;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;

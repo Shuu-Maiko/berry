@@ -15,19 +15,19 @@ import com.shuu.berry.repository.UserRepository;
 @RequestMapping("/users")
 public class UserController {
 
-    private final UserRepository repository;
+  private final UserRepository repository;
 
-    public UserController(UserRepository repository) {
-        this.repository = repository;
-    }
+  public UserController(UserRepository repository) {
+    this.repository = repository;
+  }
 
-    @PostMapping
-    public User create(@RequestBody User user) {
-        return repository.save(user);
-    }
+  @PostMapping
+  public User create(@RequestBody User user) {
+    return repository.save(user);
+  }
 
-    @GetMapping
-    public List<User> list() {
-        return repository.findAll();
-    }
+  @GetMapping
+  public List<User> list() {
+    return repository.findAll();
+  }
 }
