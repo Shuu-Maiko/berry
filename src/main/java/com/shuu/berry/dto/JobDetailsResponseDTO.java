@@ -5,7 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import java.time.Instant;
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor
@@ -18,11 +17,11 @@ public class JobDetailsResponseDTO {
   private String jobType;
   private String message;
   private String url;
-  
+
   private String httpMethod;
   private java.util.Map<String, String> httpHeaders;
   private String payload;
-  
+
   private Instant createdAt;
   private String status;
 

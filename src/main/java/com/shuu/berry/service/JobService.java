@@ -9,9 +9,9 @@ import com.shuu.berry.entity.User;
 import com.shuu.berry.repository.JobRepository;
 import com.shuu.berry.repository.UserRepository;
 import com.shuu.berry.utils.UuidUtil;
+import lombok.RequiredArgsConstructor;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jobrunr.storage.StorageProvider;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.security.core.Authentication;
@@ -21,22 +21,16 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 public class JobService {
 
-  @Autowired
-  private JobScheduler jobScheduler;
-  @Autowired
-  private PrintService printService;
-  @Autowired
-  private JobRepository jobRepository;
-  @Autowired
-  private WebhookService webhookService;
-  @Autowired
-  private UserRepository userRepository;
-  @Autowired
-  private JdbcTemplate jdbcTemplate;
-  @Autowired
-  private StorageProvider storageProvider;
+  private final JobScheduler jobScheduler;
+  private final PrintService printService;
+  private final JobRepository jobRepository;
+  private final WebhookService webhookService;
+  private final UserRepository userRepository;
+  private final JdbcTemplate jdbcTemplate;
+  private final StorageProvider storageProvider;
 
   public User getAuthenticatedUser() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -124,7 +118,7 @@ public class JobService {
       CronExpression cronExpression = CronExpression.parse(job.getCronExp());
       LocalDateTime nextLocal = cronExpression.next(LocalDateTime.now());
       if (nextLocal != null) {
-          nextRunTime = nextLocal.atZone(java.time.ZoneId.systemDefault()).toInstant();
+        nextRunTime = nextLocal.atZone(java.time.ZoneId.systemDefault()).toInstant();
       }
     } catch (Exception e) {
       System.out.println(e.getMessage());

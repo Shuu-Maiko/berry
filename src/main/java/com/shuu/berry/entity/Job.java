@@ -13,8 +13,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -68,4 +66,12 @@ public class Job {
   @ManyToOne
   @JoinColumn(name = "user_id", nullable = false)
   private User user;
+
+  @Builder.Default
+  @Column(name = "notify_on_failure")
+  private boolean notifyOnFailure = true;
+
+  @Builder.Default
+  @Column(name = "notify_on_success")
+  private boolean notifyOnSuccess = false;
 }

@@ -124,6 +124,12 @@
       <version>0.13.0</version>
       <scope>runtime</scope>
     </dependency>
+    <!-- RabbitMQ Integration -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-amqp</artifactId>
+      <scope>compile</scope>
+    </dependency>
   </dependencies>
   <build>
     <plugins>
