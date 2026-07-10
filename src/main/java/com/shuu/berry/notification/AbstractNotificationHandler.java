@@ -5,11 +5,16 @@ import com.shuu.berry.entity.ChannelType;
 import com.shuu.berry.entity.Job;
 import com.shuu.berry.entity.JobStatus;
 import com.shuu.berry.entity.NotificationChannel;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 public abstract class AbstractNotificationHandler {
 
   public final void processAndSend(NotificationMessage message, Job job, NotificationChannel channel) {
     if (!shouldNotify(job, message.getStatus())) {
+      log.info(
+          "Notification skipped for job '{}' with status '{}' due to job settings (notifyOnFailure={}, notifyOnSuccess={})",
+          job.getName(), message.getStatus(), job.isNotifyOnFailure(), job.isNotifyOnSuccess());
       return;
     }
 
@@ -17,6 +22,8 @@ public abstract class AbstractNotificationHandler {
       return;
     }
 
+    log.info("Sending notification of type {} for job '{}' to {}", getSupportedChannelType(), job.getName(),
+        channel.getDestination());
     String content = formatMessage(message, job);
     send(channel.getDestination(), content);
   }

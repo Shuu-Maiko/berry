@@ -13,9 +13,7 @@ import java.util.Map;
 @Slf4j
 @Component
 public class DiscordNotificationHandler extends AbstractNotificationHandler {
-
   private static final String DISCORD_WEBHOOK_PREFIX = "https://discord.com/api/webhooks/";
-
   private final RestClient restClient = RestClient.create();
 
   @Override
@@ -47,8 +45,8 @@ public class DiscordNotificationHandler extends AbstractNotificationHandler {
           .body(Map.of("content", content))
           .retrieve()
           .toBodilessEntity();
+      log.info("Successfully sent Discord notification to webhook");
     } catch (HttpClientErrorException e) {
-
       log.warn("Discord rejected notification ({}): {}", e.getStatusCode(), e.getMessage());
     }
 

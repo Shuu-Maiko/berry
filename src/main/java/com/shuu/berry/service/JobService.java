@@ -69,6 +69,8 @@ public class JobService {
         .message(req.getMessage() != null ? req.getMessage() : "")
         .start(LocalDateTime.now())
         .user(user)
+        .notifyOnFailure(req.getNotifyOnFailure() == null || req.getNotifyOnFailure())
+        .notifyOnSuccess(req.getNotifyOnSuccess() != null && req.getNotifyOnSuccess())
         .build();
 
     jobRepository.save(job);
@@ -171,6 +173,8 @@ public class JobService {
         .lastRunStatus(lastRunStatus)
         .nextRunTime(nextRunTime)
         .lastRun(lastRun)
+        .notifyOnFailure(job.isNotifyOnFailure())
+        .notifyOnSuccess(job.isNotifyOnSuccess())
         .build();
   }
 
@@ -199,5 +203,18 @@ public class JobService {
           updatedAt,
           durationMs);
     }, secureJobId);
+  }
+
+  public void updateJobSettings(String secureJobId, boolean notifyOnFailure, boolean notifyOnSuccess, User user) {
+    Job job = jobRepository.findBySecureJobId(secureJobId)
+        .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+
+    if (!job.getUser().getId().equals(user.getId())) {
+      throw new SecurityException("You do not own this job");
+    }
+
+    job.setNotifyOnFailure(notifyOnFailure);
+    job.setNotifyOnSuccess(notifyOnSuccess);
+    jobRepository.save(job);
   }
 }

@@ -29,5 +29,8 @@ public class JobDetailsResponseDTO {
   private String lastRunStatus;
   private Instant nextRunTime;
 
+  private boolean notifyOnFailure;
+  private boolean notifyOnSuccess;
+
   private JobRunHistoryDTO lastRun;
 }

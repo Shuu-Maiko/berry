@@ -3,6 +3,7 @@ package com.shuu.berry.controller;
 import com.shuu.berry.dto.JobRequestDTO;
 import com.shuu.berry.dto.JobDetailsResponseDTO;
 import com.shuu.berry.dto.JobRunHistoryDTO;
+import com.shuu.berry.dto.JobSettingsUpdateDTO;
 import com.shuu.berry.entity.Job;
 import com.shuu.berry.entity.User;
 import com.shuu.berry.service.JobService;
@@ -90,6 +91,23 @@ public class RecurringJobController {
       User user = jobService.getAuthenticatedUser();
       List<JobRunHistoryDTO> history = jobService.getJobHistory(secureJobId, user);
       return ResponseEntity.ok(history);
+    } catch (SecurityException e) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    } catch (RuntimeException e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+    }
+  }
+
+  @PatchMapping("/{secureJobId}/settings")
+  public ResponseEntity<?> updateJobSettings(
+      @PathVariable String secureJobId,
+      @RequestBody JobSettingsUpdateDTO req) {
+    try {
+      User user = jobService.getAuthenticatedUser();
+      jobService.updateJobSettings(secureJobId, req.notifyOnFailure(), req.notifyOnSuccess(), user);
+      return ResponseEntity.ok(Map.of("message", "Successfully updated job settings"));
     } catch (SecurityException e) {
       return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
     } catch (IllegalArgumentException e) {

@@ -22,15 +22,19 @@ public class NotificationConsumer {
   private final NotificationChannelRepository channelRepository;
   private final List<AbstractNotificationHandler> handlers;
 
-  @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE)
+  @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE, concurrency = "5-25")
   public void consumeMessage(NotificationMessage message) {
+    log.info("Received notification message from queue: job={}, status={}", message.getSecureJobId(),
+        message.getStatus());
     Job job = jobRepository.findBySecureJobId(message.getSecureJobId()).orElse(null);
     if (job == null) {
       log.warn("Received notification for unknown job: {}", message.getSecureJobId());
       return;
     }
 
+    log.info("Processing notification alerts for job '{}' owned by '{}'", job.getName(), job.getUser().getEmail());
     List<NotificationChannel> channels = channelRepository.findByUser(job.getUser());
+    log.info("Found {} notification channels registered for user", channels.size());
 
     for (NotificationChannel channel : channels) {
       for (AbstractNotificationHandler handler : handlers) {

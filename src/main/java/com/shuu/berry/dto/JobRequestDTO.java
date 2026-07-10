@@ -25,4 +25,7 @@ public class JobRequestDTO {
   private WebhookHttpMethod httpMethod;
   private java.util.Map<String, String> httpHeaders;
   private String payload;
+
+  private Boolean notifyOnFailure;
+  private Boolean notifyOnSuccess;
 }
