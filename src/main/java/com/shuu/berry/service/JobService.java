@@ -3,15 +3,18 @@ package com.shuu.berry.service;
 import com.shuu.berry.dto.JobRequestDTO;
 import com.shuu.berry.dto.JobDetailsResponseDTO;
 import com.shuu.berry.dto.JobRunHistoryDTO;
+import com.shuu.berry.dto.JobResponseLogDTO;
 import com.shuu.berry.entity.Job;
 import com.shuu.berry.entity.JobType;
 import com.shuu.berry.entity.User;
 import com.shuu.berry.repository.JobRepository;
 import com.shuu.berry.repository.UserRepository;
+import com.shuu.berry.repository.JobResponseLogRepository;
 import com.shuu.berry.utils.UuidUtil;
 import lombok.RequiredArgsConstructor;
 import org.jobrunr.scheduling.JobScheduler;
 import org.jobrunr.storage.StorageProvider;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.scheduling.support.CronExpression;
 import org.springframework.security.core.Authentication;
@@ -31,6 +34,7 @@ public class JobService {
   private final UserRepository userRepository;
   private final JdbcTemplate jdbcTemplate;
   private final StorageProvider storageProvider;
+  private final JobResponseLogRepository jobResponseLogRepository;
 
   public User getAuthenticatedUser() {
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -43,6 +47,9 @@ public class JobService {
   }
 
   public Job createJob(JobRequestDTO req, User user) {
+    if (jobRepository.countByUser(user) >= 10) {
+      throw new RuntimeException("Free tier limit reached: You can only have 10 active jobs.");
+    }
     if (req.getJobType() == JobType.WEBHOOK) {
       if (req.getUrl() == null || req.getUrl().trim().isEmpty()) {
         throw new IllegalArgumentException("URL is required for WEBHOOK job type");
@@ -216,5 +223,24 @@ public class JobService {
     job.setNotifyOnFailure(notifyOnFailure);
     job.setNotifyOnSuccess(notifyOnSuccess);
     jobRepository.save(job);
+  }
+
+  public List<JobResponseLogDTO> getJobResponses(String secureJobId, int limit, User user) {
+    Job job = jobRepository.findBySecureJobId(secureJobId)
+        .orElseThrow(() -> new IllegalArgumentException("Job not found"));
+
+    if (!job.getUser().getId().equals(user.getId())) {
+      throw new SecurityException("You do not own this job");
+    }
+
+    int actualLimit = Math.min(limit, 100);
+    return jobResponseLogRepository.findBySecureJobIdOrderByCreatedAtDesc(secureJobId, PageRequest.of(0, actualLimit))
+        .stream()
+        .map(log -> new JobResponseLogDTO(
+            log.getSecureJobId(),
+            log.getHttpStatus(),
+            log.getResponseBody(),
+            log.getCreatedAt()))
+        .toList();
   }
 }

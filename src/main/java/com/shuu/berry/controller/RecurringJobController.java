@@ -116,4 +116,21 @@ public class RecurringJobController {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
     }
   }
+
+  @GetMapping("/{secureJobId}/responses")
+  public ResponseEntity<?> getJobResponses(
+      @PathVariable String secureJobId,
+      @RequestParam(defaultValue = "100") int limit) {
+    try {
+      User user = jobService.getAuthenticatedUser();
+      var responses = jobService.getJobResponses(secureJobId, limit, user);
+      return ResponseEntity.ok(responses);
+    } catch (SecurityException e) {
+      return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", e.getMessage()));
+    } catch (IllegalArgumentException e) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("message", e.getMessage()));
+    } catch (RuntimeException e) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", e.getMessage()));
+    }
+  }
 }

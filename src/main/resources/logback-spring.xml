@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Define the Logfmt style pattern for Render Console -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>time="%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX}" level=%-5level logger="%logger{36}" thread="%thread" msg="%msg"%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Silence the noisy frameworks by defaulting to WARN -->
+    <root level="WARN">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Explicitly allow our application code to print INFO logs -->
+    <logger name="com.shuu.berry" level="INFO" additivity="false">
+        <appender-ref ref="CONSOLE" />
+    </logger>
+    
+    <!-- Keep JobRunr errors visible -->
+    <logger name="org.jobrunr" level="WARN" />
+</configuration>

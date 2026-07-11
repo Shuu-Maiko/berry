@@ -12,4 +12,6 @@ public interface JobRepository extends JpaRepository<Job, Long> {
   List<Job> findByUser(User user);
 
   Optional<Job> findBySecureJobId(String secureJobId);
+
+  long countByUser(User user);
 }

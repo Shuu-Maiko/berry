@@ -25,7 +25,6 @@ public class JobRunrNotificationFilter implements ApplyStateFilter {
       log.debug("State {} is not a monitored state, skipping notification", newState.getName());
       return;
     }
-
     NotificationMessage message = NotificationMessage.builder()
         .secureJobId(job.getRecurringJobId().orElse(job.getId().toString()))
         .status(status)

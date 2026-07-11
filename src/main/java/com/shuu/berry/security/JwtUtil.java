@@ -11,11 +11,22 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.function.Function;
 
+import jakarta.annotation.PostConstruct;
+
 @Component
 public class JwtUtil {
 
-  @Value("${jwt.secret:aac31c684ad0dcdf2fac8db83d6696d2dcfecbbe6c3ca9442cd0d0b9062c30c4}")
+  @Value("${jwt.secret:}")
   private String secret;
+
+  @PostConstruct
+  public void init() {
+    if (secret == null || secret.isBlank()) {
+      System.err.println("You MUST provide JWT_SECRET in your .env file or environment.");
+
+      throw new IllegalStateException("Missing JWT_SECRET environment variable.");
+    }
+  }
 
   @Value("${jwt.expiration:86400000}") // 1 day
   private long expiration;
