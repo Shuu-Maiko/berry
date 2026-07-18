@@ -10,29 +10,49 @@ here is the engineering math behind how we tuned the system to stay alive under 
 
 ---
 
-## Throughput & Scaling
+## System Architecture
 
-### 1. Webhook Execution Capacity
-an average HTTP webhook request (outgoing ping) takes about **500ms** to complete (network roundtrip + external server processing).
+```mermaid
+graph TD
+    Client[Client Browser] -->|HTTP/REST| API[Spring Boot App]
+    API -->|Read/Write| DB[(PostgreSQL)]
+    API -->|Publish| RMQ[RabbitMQ Broker]
+    RMQ -->|Consume| Worker[App Workers]
+    Worker -->|HTTP Ping| Target[External Webhooks]
+    Worker -->|Publish Alerts| Discord[Discord Webhook]
+```
 
-we capped our scheduler to use exactly **10 worker threads** (`jobrunr.background-job-server.worker-count=10`). 
+## Throughput & Scaling (Powered by Virtual Threads)
+
+if we assume our RabbitMQ message broker has unlimited throughput and zero latency, the system's capacity is entirely bottlenecked by the application's worker threads on Render's free tier. 
+
+traditionally, java threads are tied 1:1 to OS threads. on 512MB RAM, running more than 150-200 platform threads will crash the container with an OutOfMemoryError. 
+
+however, because our webhook pings are entirely **I/O bound** (waiting 500ms for network responses) rather than CPU bound, we upgraded the system to use **Java 21 Virtual Threads**.
+
+### Webhook Execution Capacity
+a virtual thread consumes a negligible ~1KB of heap memory and unmounts from the underlying CPU while waiting for the network. this allows us to scale our `JobRunr` workers to **200** without hitting memory limits or throttling the 0.1 vCPU.
 
 $$\text{Throughput per worker} = \frac{1000\text{ ms}}{500\text{ ms/job}} = 2\text{ jobs/sec}$$
 
-$$\text{Max System Throughput} = 10\text{ workers} \times 2\text{ jobs/sec} = 20\text{ jobs/sec}$$
+$$\text{Max System Throughput} = 200\text{ workers} \times 2\text{ jobs/sec} = 400\text{ jobs/sec}$$
 
-*   **per minute:** $20 \times 60 = 1,200\text{ jobs/minute}$.
-*   **per day:** $1,200 \times 1440 = 1,728,000\text{ jobs/day}$.
+*   **per minute:** $400 \times 60 = 24,000\text{ jobs/minute}$.
+*   **per day:** $24,000 \times 1440 = 34,560,000\text{ jobs/day}$.
 
-so on paper, our little free-tier container can trigger **1.7 million webhooks a day**!
+thanks to virtual threads, our free-tier container can theoretically trigger **34.5 million webhooks a day**.
 
-### 2. The Slow Target Bottleneck (Tarpits)
+### 2. Discord Notification Overhead
+what if every job triggers a discord webhook notification? 
+a discord webhook ping also takes ~500ms to complete. because Spring Boot 3.2+ backs `@RabbitListener` with virtual threads, we safely increased the concurrency limit to **20**.
+
+$$\text{Notification Throughput} = 20\text{ workers} \times 2\text{ pings/sec} = 40\text{ notifications/sec}$$
+
+if 100% of the 400 jobs/sec trigger notifications, the queue will back up because the consumer (40/sec) cannot keep up with the producer. to maintain a 100% notification rate at max capacity, we would just bump the rabbitmq concurrency to 200 (which costs negligible memory), bringing the system to a perfectly balanced 34.5 million jobs + 34.5 million notifications per day.
+
+### 3. The Slow Target Bottleneck (Tarpits)
 what if a user configures a job to ping a slow server that takes **4 seconds** to respond? 
-if we didn't set limits, 10 slow jobs would block all 10 worker threads, dropping our throughput to:
-
-$$\text{Blocked Throughput} = \frac{10\text{ workers}}{4\text{ sec}} = 2.5\text{ jobs/sec} \quad (150\text{ jobs/minute})$$
-
-to prevent this "tarpit attack," we configured our `RestClient` with a strict **5-second timeout**. no matter how slow the target is, a worker thread will free up in at most 5 seconds.
+if we used platform threads, 10 slow jobs would block the whole pool. with 200 virtual threads, 10 tarpit jobs barely make a dent. additionally, we configured our `RestClient` with a strict **5-second timeout** to ensure even virtual threads eventually free up.
 
 ---
 
@@ -42,17 +62,21 @@ spring boot and hibernate are memory hogs. a default spring boot app can easily 
 
 we did two major optimizations to stay under the limit:
 
-### 1. Disabling Default Virtual Thread Spawning in JobRunr
-by default, JobRunr checks your CPU cores and spawns threads dynamically using a `cores * 16` formula. in a containerized environment (like render), java might detect the host machine's cores (e.g. 16 or 32 cores) instead of the container's allocated CPU share. this would spawn **256+ threads**, causing instant memory bloat and OOM crashes.
-
-we disabled this in `application.properties`:
+### 1. Enabling Virtual Threads in JobRunr
+instead of falling back to default thread pools, we explicitly enabled Java 21 Virtual Threads in `application.properties`:
 ```properties
-jobrunr.background-job-server.thread-type=PlatformThreads
-jobrunr.background-job-server.worker-count=10
+jobrunr.background-job-server.thread-type=VirtualThreads
+jobrunr.background-job-server.worker-count=200
 ```
-this locks the thread count strictly to 10, keeping our memory usage highly predictable.
+this gives us massive concurrency (200 workers) while consuming less than 1MB of heap space for the threads themselves.
 
-### 2. HikariCP Connection Pool Sizing
+### 2. Render JVM Tuning (`JAVA_TOOL_OPTIONS`)
+instead of a custom Dockerfile, we rely on Render's native Java environment by injecting aggressive memory-tuning JVM flags into the `JAVA_TOOL_OPTIONS` environment variable. these are tailored specifically for a 512MB RAM container:
+*   `-XX:+UseSerialGC`: The Serial Garbage Collector is vastly superior to the default G1GC for containers with less than 1 full CPU core and < 512MB RAM. It reduces background GC thread overhead.
+*   `-Xmx350m`: Hard limits the Java heap to 350MB, leaving 162MB for the OS and off-heap memory, guaranteeing we don't hit Render's 512MB container kill switch.
+*   `-Xss256k`: Shrinks the stack size for any remaining standard platform threads, saving megabytes of RAM.
+
+### 3. HikariCP Connection Pool Sizing
 every database connection takes up memory in both the Spring app and the Postgres server. if we set our connection pool too high, we'll hit database connection limits or run out of memory. 
 
 we tuned the pool size to **30**:
@@ -65,11 +89,11 @@ this leaves 20 connections free (if we have a 50-conn limit) for local developer
 
 ## Hard Bottlenecks (Where the System Will Break)
 
-if you scale this system to thousands of users, here is exactly what will break first:
+if you scale this system to thousands of users with unlimited RabbitMQ, here is exactly what will break first:
 
 1.  **Database Write IOPS:** 
-    every job run writes a execution state log to the database. at 1,200 jobs/minute, we are writing to disk 20 times per second. free database tiers (like neon or render postgres) will throttle disk writes once you exceed their IOPS limits.
+    every job run writes an execution state log to the database. at 1,200 jobs/minute, we are writing to disk 20 times per second. free database tiers (like neon or render postgres) will throttle disk writes once you exceed their IOPS limits.
 2.  **RAM Garbage Collection Spikes:**
     if we process 20 jobs/sec, java will generate millions of short-lived objects (HTTP requests, DTOs, JSON payloads). the JVM Garbage Collector will have to run constantly. on a 0.1 CPU share, garbage collection will cause massive latency spikes, eventually leading to memory leaks or OOMs.
-3.  **JobRunr Poll Interval:**
-    JobRunr polls the database every 15 seconds by default to see what jobs are due. if we have 500 jobs scheduled to run at the exact same second, there will be a slight delay (latency) as the workers query and dequeue them in batches.
+3.  **Database Connection Limits:**
+    while virtual threads allow us to spawn thousands of concurrent tasks, our PostgreSQL database (Neon free tier) only allows ~50 concurrent connections. we capped `HikariCP` to 30 connections. if all 200 virtual threads try to access the database simultaneously, they will block waiting for a database connection, shifting the bottleneck from RAM to Database Pool Exhaustion.

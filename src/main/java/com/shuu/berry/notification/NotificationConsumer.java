@@ -22,7 +22,7 @@ public class NotificationConsumer {
   private final NotificationChannelRepository channelRepository;
   private final List<AbstractNotificationHandler> handlers;
 
-  @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE, concurrency = "5-25")
+  @RabbitListener(queues = RabbitMQConfig.NOTIFICATION_QUEUE, concurrency = "20")
   public void consumeMessage(NotificationMessage message) {
     log.info("Received notification message from queue: job={}, status={}", message.getSecureJobId(),
         message.getStatus());

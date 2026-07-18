@@ -27,12 +27,13 @@ to run berry on render's free tier:
 4.  **Configure environment variables** in the Render dashboard:
     *   `DB_USERNAME`: database user
     *   `DB_PASSWORD`: database password
-    *   `spring.datasource.url`: jdbc connection string
+    *   `DATABASE_URL`: jdbc connection string
     *   `JWT_SECRET`: a 256-bit signing key (at least 32 characters)
     *   `RABBITMQ_HOST`: your rabbitmq broker hostname
     *   `RABBITMQ_PORT`: rabbitmq port (usually 5672)
     *   `RABBITMQ_USERNAME`: rabbitmq user
     *   `RABBITMQ_PASSWORD`: rabbitmq password
+    *   `FRONTEND_URL`: the full https url of your deployed frontend (e.g. `https://my-berry-ui.vercel.app`)
     *   `APP_ENV`: set to `prod`
 
 ---
@@ -69,6 +70,7 @@ detailed documentation on scaling and security design is located in the `docs/` 
 
 *   **[Capacity & Bottlenecks (The Math)](docs/architecture.md)** — calculations of throughput limits, JVM memory settings, and database pool constraints on 512MB RAM.
 *   **[Security Architecture](docs/security.md)** — how we mitigated cloud-specific attacks like SSRF, CSRF, BOLA, and DoS.
+*   **[API Reference](docs/api.md)** — full list of REST endpoints and payload structures.
 
 ---
 
@@ -77,6 +79,7 @@ detailed documentation on scaling and security design is located in the `docs/` 
 ```
 ├── docs/                      # deep-dive documentation
 │   ├── architecture.md        # capacity math and hardware limits
+│   ├── api.md                 # REST API endpoints and payloads
 │   └── security.md            # ssrf, csrf, bola mitigation details
 ├── src/
 │   ├── main/
