@@ -49,7 +49,7 @@ public class NotificationChannelService {
     NotificationChannel channel = channelRepository.findById(id)
         .orElseThrow(() -> new IllegalArgumentException("Notification channel not found"));
 
-    if (channel.getUser().getId() != user.getId()) {
+    if (!channel.getUser().getId().equals(user.getId())) {
       log.warn("User {} attempted to delete channel {} owned by user {}", user.getId(), id, channel.getUser().getId());
       throw new SecurityException("You do not own this notification channel");
     }

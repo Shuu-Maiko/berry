@@ -2,6 +2,7 @@ package com.shuu.berry.controller;
 
 import java.util.List;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,6 +14,7 @@ import com.shuu.berry.repository.UserRepository;
 
 @RestController
 @RequestMapping("/users")
+@ConditionalOnProperty(name = "app.env", havingValue = "dev")
 public class UserController {
 
   private final UserRepository repository;

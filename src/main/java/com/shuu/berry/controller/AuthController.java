@@ -14,9 +14,14 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @RestController
 @RequestMapping("/api/auth")
 public class AuthController {
+
+  @Value("${app.env:prod}")
+  private String appEnv;
 
   @Autowired
   private AuthService authService;
@@ -37,11 +42,13 @@ public class AuthController {
   public ResponseEntity<?> login(@Valid @RequestBody LoginRequestDTO req) {
     try {
       String token = authService.authenticateUser(req);
+      boolean isSecure = !"dev".equalsIgnoreCase(appEnv);
 
       org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie
           .from("auth_token", token)
           .httpOnly(true)
-          .secure(false) // NOTE: false for localhost
+          .secure(isSecure) // NOTE: false for dev, true for prod
+          .sameSite("Strict")
           .path("/")
           .maxAge(86400) // 1 day
           .build();
@@ -57,9 +64,12 @@ public class AuthController {
 
   @PostMapping("/logout")
   public ResponseEntity<?> logout() {
+    boolean isSecure = !"dev".equalsIgnoreCase(appEnv);
+
     org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("auth_token", "")
         .httpOnly(true)
-        .secure(false)
+        .secure(isSecure)
+        .sameSite("Strict")
         .path("/")
         .maxAge(0)
         .build();

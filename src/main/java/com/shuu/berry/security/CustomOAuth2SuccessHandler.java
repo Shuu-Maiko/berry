@@ -24,6 +24,9 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
   @Autowired
   private UserRepository userRepository;
 
+  @Value("${app.env:prod}")
+  private String appEnv;
+
   @Value("${app.frontend-redirect-url:http://localhost:3000/oauth2/redirect}")
   private String frontendRedirectUrl;
 
@@ -49,10 +52,12 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
     });
 
     String token = jwtUtil.generateToken(user.getEmail());
+    boolean isSecure = !"dev".equalsIgnoreCase(appEnv);
 
     ResponseCookie cookie = ResponseCookie.from("auth_token", token)
         .httpOnly(true)
-        .secure(false) // just for localhost
+        .secure(isSecure)
+        .sameSite("Strict")
         .path("/")
         .maxAge(86400)
         .build();
