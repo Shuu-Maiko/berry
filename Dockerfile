@@ -35,4 +35,4 @@ EXPOSE 8080
 # -XX:MaxMetaspaceSize=100m: Prevents off-heap memory leaks from loaded classes.
 # -Xss256k: Shrinks OS thread stack size to conserve RAM.
 # -XX:+ExitOnOutOfMemoryError: Forces container crash on OOM so Render auto-restarts it.
-ENTRYPOINT ["sh", "-c", "java -XX:+UseSerialGC -Xmx300m -XX:MaxMetaspaceSize=100m -Xss256k -XX:+ExitOnOutOfMemoryError -Dserver.port=${PORT:8080} -jar app.jar"]
+ENTRYPOINT ["sh", "-c", "java -XX:+UseSerialGC -Xmx250m -XX:MaxMetaspaceSize=150m -Xss256k -XX:+ExitOnOutOfMemoryError -Dserver.port=${PORT:8080} -jar app.jar"]
