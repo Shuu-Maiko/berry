@@ -21,7 +21,7 @@
 
 to run berry on render's free tier:
 
-1.  **Create a web service** on Render pointing to your fork of this repository.
+1.  **Create a web service** on Render pointing to your fork of this repository. Render will automatically detect the `Dockerfile` and build the optimized Alpine container.
 2.  **Add a PostgreSQL database** (either Render's free tier, neon, or supabase).
 3.  **Add a RabbitMQ broker instance** (e.g. from cloudamqp free tier).
 4.  **Configure environment variables** in the Render dashboard:

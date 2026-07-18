@@ -70,11 +70,14 @@ jobrunr.background-job-server.worker-count=200
 ```
 this gives us massive concurrency (200 workers) while consuming less than 1MB of heap space for the threads themselves.
 
-### 2. Render JVM Tuning (`JAVA_TOOL_OPTIONS`)
-instead of a custom Dockerfile, we rely on Render's native Java environment by injecting aggressive memory-tuning JVM flags into the `JAVA_TOOL_OPTIONS` environment variable. these are tailored specifically for a 512MB RAM container:
-*   `-XX:+UseSerialGC`: The Serial Garbage Collector is vastly superior to the default G1GC for containers with less than 1 full CPU core and < 512MB RAM. It reduces background GC thread overhead.
-*   `-Xmx350m`: Hard limits the Java heap to 350MB, leaving 162MB for the OS and off-heap memory, guaranteeing we don't hit Render's 512MB container kill switch.
-*   `-Xss256k`: Shrinks the stack size for any remaining standard platform threads, saving megabytes of RAM.
+### 2. Expert Dockerfile Tuning
+we created a multi-stage `Dockerfile` that packages the Spring Boot app with aggressive memory-tuning JVM flags tailored for a 512MB RAM environment:
+*   **Alpine JRE:** The final image uses `eclipse-temurin:21-jre-alpine`, stripping compiler tools and shrinking the image to under 150MB.
+*   `-XX:+UseSerialGC`: The Serial Garbage Collector is vastly superior to the default G1GC for containers with less than 1 full CPU core and < 512MB RAM. It is single-threaded and reduces background GC CPU thrashing.
+*   `-Xmx300m`: Hard limits the Java heap to 300MB, leaving 212MB for the OS, Metaspace, and off-heap memory, guaranteeing we don't hit Render's 512MB container kill switch.
+*   `-XX:MaxMetaspaceSize=100m`: Prevents off-heap memory leaks from Spring Boot class loading.
+*   `-Xss256k`: Shrinks the stack size for any remaining standard OS threads, saving megabytes of RAM.
+*   `-XX:+ExitOnOutOfMemoryError`: Forces the container to cleanly crash if RAM runs out, ensuring Render auto-restarts the service instead of it hanging.
 
 ### 3. HikariCP Connection Pool Sizing
 every database connection takes up memory in both the Spring app and the Postgres server. if we set our connection pool too high, we'll hit database connection limits or run out of memory. 
