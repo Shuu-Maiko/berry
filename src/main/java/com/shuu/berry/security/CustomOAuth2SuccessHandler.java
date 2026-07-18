@@ -57,7 +57,7 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
     ResponseCookie cookie = ResponseCookie.from("auth_token", token)
         .httpOnly(true)
         .secure(isSecure)
-        .sameSite("Strict")
+        .sameSite(isSecure ? "None" : "Lax")
         .path("/")
         .maxAge(86400)
         .build();

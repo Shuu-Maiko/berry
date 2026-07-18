@@ -48,7 +48,7 @@ public class AuthController {
           .from("auth_token", token)
           .httpOnly(true)
           .secure(isSecure) // NOTE: false for dev, true for prod
-          .sameSite("Strict")
+          .sameSite(isSecure ? "None" : "Lax")
           .path("/")
           .maxAge(86400) // 1 day
           .build();
@@ -69,7 +69,7 @@ public class AuthController {
     org.springframework.http.ResponseCookie cookie = org.springframework.http.ResponseCookie.from("auth_token", "")
         .httpOnly(true)
         .secure(isSecure)
-        .sameSite("Strict")
+        .sameSite(isSecure ? "None" : "Lax")
         .path("/")
         .maxAge(0)
         .build();
