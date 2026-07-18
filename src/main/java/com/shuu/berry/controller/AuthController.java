@@ -55,7 +55,7 @@ public class AuthController {
 
       return ResponseEntity.ok()
           .header(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString())
-          .body(Map.of("message", "Login successful"));
+          .body(Map.of("message", "Login successful", "token", token));
     } catch (IllegalArgumentException e) {
       return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
           .body(Map.of("message", e.getMessage()));

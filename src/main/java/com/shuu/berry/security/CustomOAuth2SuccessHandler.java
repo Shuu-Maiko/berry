@@ -64,6 +64,7 @@ public class CustomOAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHa
 
     response.addHeader(org.springframework.http.HttpHeaders.SET_COOKIE, cookie.toString());
 
-    getRedirectStrategy().sendRedirect(request, response, frontendRedirectUrl);
+    String finalRedirectUrl = frontendRedirectUrl + "?token=" + token;
+    getRedirectStrategy().sendRedirect(request, response, finalRedirectUrl);
   }
 }
