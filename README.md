@@ -1,87 +1,118 @@
-# Berry 🍓
+<div align="center">
 
-a simple cron job engine helped me learn core parts of springboot and java. i wanted this project to help me learn distributed systems and how to design a system to handle real traffic. but since i had restrictions of spending no money on this, i decided to deploy everything on render's free tier. 
+<h1>
+  Berry (<code>berry</code>)
+</h1>
 
-berry is a lightweight, distributed cron job and webhook scheduler. it lets you schedule recurring HTTP pings, print logs, and get notified on discord when things fail or succeed. 
+**Berry** is a lightweight, distributed cron job and webhook scheduler. It runs as a springboot backend that manages recurring HTTP pings, writes database logs, and triggers discord alerts when jobs fail or succeed—built to handle real traffic on a zero-dollar budget.
+
+[Installing the service](#installing-the-service) ·
+[Building from source](#building-from-source) ·
+[Documentation](#documentation) ·
+[Repository layout](#repository-layout) ·
+[Development](#development) ·
+[License](#license)
+
+</div>
 
 ---
 
-## 🏗️ Architecture
+## Installing the service
 
-here's how everything connects. since we are on render's free tier, we avoided resource-heavy message brokers or caching layers (like redis) and instead utilized postgres as our single source of truth for scheduling and job states via jobrunr.
+to run berry on render's free tier:
 
-```mermaid
-graph TD
-    Client[Client / Frontend] -->|REST Request| SpringBoot[Spring Boot App]
-    SpringBoot -->|JWT / Auth| Security[Security Config & Filters]
-    SpringBoot -->|Schedules Job| JobRunr[JobRunr Scheduler]
-    JobRunr -->|Persists State| Postgres[(PostgreSQL Database)]
-    JobRunr -->|Executes Job| WebhookWorker[Webhook Service]
-    WebhookWorker -->|SSRF Validation| SsrfValidator[SSRF Validator]
-    WebhookWorker -->|HTTP Ping| ExternalAPI[External Webhook Target]
-    WebhookWorker -->|Log Response| Postgres
-    WebhookWorker -->|Publish Status| RabbitMQ[RabbitMQ Broker]
-    RabbitMQ -->|Trigger Alert| Discord[Discord Webhook]
+1.  **Create a web service** on Render pointing to your fork of this repository.
+2.  **Add a PostgreSQL database** (either Render's free tier, neon, or supabase).
+3.  **Add a RabbitMQ broker instance** (e.g. from cloudamqp free tier).
+4.  **Configure environment variables** in the Render dashboard:
+    *   `DB_USERNAME`: database user
+    *   `DB_PASSWORD`: database password
+    *   `spring.datasource.url`: jdbc connection string
+    *   `JWT_SECRET`: a 256-bit signing key (at least 32 characters)
+    *   `RABBITMQ_HOST`: your rabbitmq broker hostname
+    *   `RABBITMQ_PORT`: rabbitmq port (usually 5672)
+    *   `RABBITMQ_USERNAME`: rabbitmq user
+    *   `RABBITMQ_PASSWORD`: rabbitmq password
+    *   `APP_ENV`: set to `prod`
+
+---
+
+## Building from source
+
+### Requirements
+
+*   **Java 21** or higher.
+*   **PostgreSQL** running locally on port 5432.
+*   **RabbitMQ** running locally on port 5672.
+
+### Local Setup
+
+1.  Clone this repository.
+2.  Create a `.env` file in the project root:
+    ```env
+    DB_USERNAME=postgres
+    DB_PASSWORD=your_local_password
+    JWT_SECRET=super_secret_local_jwt_signing_key_32_chars
+    APP_ENV=dev
+    ```
+3.  Run the springboot backend:
+    ```sh
+    ./mvnw spring-boot:run
+    ```
+    the service will boot up and listen on port `8080`.
+
+---
+
+## Documentation
+
+detailed documentation on scaling and security design is located in the `docs/` folder:
+
+*   **[Capacity & Bottlenecks (The Math)](docs/architecture.md)** — calculations of throughput limits, JVM memory settings, and database pool constraints on 512MB RAM.
+*   **[Security Architecture](docs/security.md)** — how we mitigated cloud-specific attacks like SSRF, CSRF, BOLA, and DoS.
+
+---
+
+## Repository layout
+
+```
+├── docs/                      # deep-dive documentation
+│   ├── architecture.md        # capacity math and hardware limits
+│   └── security.md            # ssrf, csrf, bola mitigation details
+├── src/
+│   ├── main/
+│   │   ├── java/com/shuu/berry/
+│   │   │   ├── config/        # spring configuration files
+│   │   │   ├── controller/    # rest controllers (auth, jobs, notifications)
+│   │   │   ├── dto/           # request/response data transfer objects
+│   │   │   ├── entity/        # jpa database entities (user, job, logs)
+│   │   │   ├── notification/  # rabbitmq consumer and discord integration
+│   │   │   ├── repository/    # database access layers
+│   │   │   ├── security/      # jwt filters and ssrf URL validators
+│   │   │   └── service/       # business logic (job scheduler, webhooks)
+│   │   └── resources/
+│   │       └── application.properties # global configuration settings
+│   └── test/                  # unit and integration tests
+├── pom.xml                    # maven dependency manager
+└── README.md                  # this file
 ```
 
 ---
 
-## ⚡ Quick Start (Local Setup)
+## Development
 
-to run this locally without spending a dime:
+### Profile and Environment Setup
+we use `APP_ENV` to change security behaviors between environments:
+*   **dev**: disables strict HTTPS cookie checks and instantiates `UserController.java` (enables `GET /users` API for local testing).
+*   **prod**: locks cookies to HTTPS only, adds sameSite attributes, and deletes the `/users` endpoint from memory.
 
-1. **Clone the repo**
-2. **Setup your `.env` file** in the root directory:
-   ```env
-   DB_USERNAME=postgres
-   DB_PASSWORD=your_db_password
-   JWT_SECRET=your_super_secret_jwt_key_must_be_32_chars_long
-   RABBITMQ_HOST=localhost
-   RABBITMQ_PORT=5672
-   GOOGLE_CLIENT_ID=optional-for-oauth
-   GOOGLE_CLIENT_SECRET=optional-for-oauth
-   APP_ENV=dev
-   ```
-3. **Start the app:**
-   ```bash
-   ./mvnw spring-boot:run
-   ```
-   *the app will spin up on port `8080`.*
+### Running Tests
+to execute the springboot test suite:
+```sh
+./mvnw test
+```
 
 ---
 
-## 🔌 API Reference
+## License
 
-### 🔐 Authentication (`/api/auth`)
-| Endpoint | Method | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `/api/auth/signup` | POST | register a new user | No |
-| `/api/auth/login` | POST | log in and receive `auth_token` cookie | No |
-| `/api/auth/logout` | POST | clear the `auth_token` cookie | Yes |
-
-### 📅 Job Management (`/api/jobs`)
-| Endpoint | Method | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `/api/jobs/create` | POST | schedule a new cron job (webhook or log) | Yes |
-| `/api/jobs` | GET | list all jobs owned by you | Yes |
-| `/api/jobs/{secureJobId}` | DELETE | delete a specific job | Yes |
-| `/api/jobs/{secureJobId}/details` | GET | get metadata and next execution time | Yes |
-| `/api/jobs/{secureJobId}/history` | GET | get last 100 runs of the job from jobrunr | Yes |
-| `/api/jobs/{secureJobId}/responses` | GET | get raw HTTP response logs from webhook pings | Yes |
-| `/api/jobs/{secureJobId}/settings` | PATCH | update notification preferences | Yes |
-
-### 🔔 Notification Channels (`/api/notifications/channels`)
-| Endpoint | Method | Description | Auth Required |
-| :--- | :--- | :--- | :--- |
-| `/api/notifications/channels` | GET | list all registered notification channels | Yes |
-| `/api/notifications/channels` | POST | add a new channel (e.g., discord webhook) | Yes |
-| `/api/notifications/channels/{id}` | DELETE | remove a notification channel | Yes |
-
----
-
-## 📚 Deep Dives & Documentation
-
-want to know the math or how we secured it? check out the guides below:
-
-* **[Capacity & Bottlenecks (The Math)](docs/architecture.md)** — how much traffic this free-tier monster can actually handle.
-* **[Security Architecture](docs/security.md)** — how we blocked SSRF, CSRF, and BOLA on a zero-dollar budget.
+This project is licensed under the MIT License.

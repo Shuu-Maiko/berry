@@ -1,4 +1,4 @@
-# ⚙️ Capacity Planning & Hardware Bottlenecks
+# Capacity Planning & Hardware Bottlenecks
 
 building a distributed scheduler on a zero-dollar budget is all about managing tight limits. since we are running everything on **render's free tier**, we have to work with some harsh hardware bottlenecks:
 
@@ -10,7 +10,7 @@ here is the engineering math behind how we tuned the system to stay alive under 
 
 ---
 
-## 📊 The Math: Throughput & Scaling
+## Throughput & Scaling
 
 ### 1. Webhook Execution Capacity
 an average HTTP webhook request (outgoing ping) takes about **500ms** to complete (network roundtrip + external server processing).
@@ -36,7 +36,7 @@ to prevent this "tarpit attack," we configured our `RestClient` with a strict **
 
 ---
 
-## 🧠 Memory Tuning (Avoiding OOM)
+## Memory Tuning (Avoiding OOM)
 
 spring boot and hibernate are memory hogs. a default spring boot app can easily consume 350MB of RAM just sitting idle. if we add background workers, we risk crossing the **512MB Render limit**.
 
@@ -63,7 +63,7 @@ this leaves 20 connections free (if we have a 50-conn limit) for local developer
 
 ---
 
-## 🚧 Hard Bottlenecks (Where the System Will Break)
+## Hard Bottlenecks (Where the System Will Break)
 
 if you scale this system to thousands of users, here is exactly what will break first:
 

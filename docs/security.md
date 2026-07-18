@@ -1,4 +1,4 @@
-# 🛡️ Security Architecture & Mitigations
+# Security Architecture & Mitigations
 
 since berry allows users to schedule raw HTTP webhooks (outbound pings) and runs on a shared public cloud (render), we had to lock down the system against some extremely dangerous cloud-native vulnerabilities. 
 
